@@ -1,0 +1,587 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Painel de respostas | Saúde Pública em Foco</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+      :root {
+        --green: #174c3c;
+        --green2: #236b53;
+        --mint: #e9f4ee;
+        --ink: #20312b;
+        --muted: #65736c;
+        --line: #dce5df;
+        --bg: #f5f7f4;
+        --white: #fff;
+        --gold: #e5b75a;
+        --red: #a33b35;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font:
+          15px/1.55 system-ui,
+          -apple-system,
+          Segoe UI,
+          Roboto,
+          Arial,
+          sans-serif;
+      }
+      header {
+        background: linear-gradient(130deg, #123c30, #236b53);
+        color: #fff;
+        padding: 25px 20px;
+      }
+      .head,
+      main {
+        max-width: 1100px;
+        margin: auto;
+      }
+      header h1 {
+        margin: 0;
+        font-size: 1.55rem;
+      }
+      header p {
+        margin: 5px 0 0;
+        color: #e1eee6;
+      }
+      main {
+        padding: 24px 18px 50px;
+      }
+      .panel,
+      .card {
+        background: var(--white);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 20px;
+      }
+      .login {
+        max-width: 440px;
+        margin: 35px auto;
+      }
+      h2 {
+        color: var(--green);
+        font-size: 1.15rem;
+        margin: 0 0 14px;
+      }
+      label {
+        display: block;
+        font-weight: 650;
+        margin: 12px 0 5px;
+      }
+      input {
+        width: 100%;
+        padding: 11px 12px;
+        border: 1px solid #cbd8cf;
+        border-radius: 8px;
+        font: inherit;
+      }
+      button {
+        border: 0;
+        border-radius: 8px;
+        background: var(--green2);
+        color: #fff;
+        padding: 10px 15px;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      button.secondary {
+        background: #edf2ee;
+        color: var(--green);
+        border: 1px solid var(--line);
+      }
+      button:disabled {
+        opacity: 0.6;
+        cursor: wait;
+      }
+      .actions {
+        display: flex;
+        gap: 9px;
+        flex-wrap: wrap;
+        margin-top: 14px;
+      }
+      .muted,
+      .hint {
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+      #message {
+        margin-top: 12px;
+        font-weight: 650;
+      }
+      .error {
+        color: var(--red);
+      }
+      .success {
+        color: var(--green2);
+      }
+      .hidden {
+        display: none !important;
+      }
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+        margin: 18px 0;
+      }
+      .stat-label {
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+      .stat-value {
+        font-size: 2rem;
+        font-weight: 800;
+        color: var(--green);
+        line-height: 1.2;
+        margin-top: 5px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+        margin: 16px 0;
+      }
+      .question {
+        margin: 0 0 18px;
+      }
+      .question:last-child {
+        margin-bottom: 0;
+      }
+      .question h3 {
+        font-size: 1rem;
+        margin: 0 0 10px;
+        color: var(--green);
+      }
+      .barrow {
+        margin: 9px 0;
+      }
+      .barlabel {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        font-size: 0.9rem;
+        margin-bottom: 4px;
+      }
+      .track {
+        height: 9px;
+        background: #e8eee9;
+        border-radius: 20px;
+        overflow: hidden;
+      }
+      .fill {
+        height: 100%;
+        background: var(--green2);
+        border-radius: 20px;
+      }
+      .table-wrap {
+        overflow-x: auto;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 780px;
+        font-size: 0.88rem;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 10px 9px;
+        border-bottom: 1px solid var(--line);
+        vertical-align: top;
+      }
+      th {
+        color: var(--green);
+        background: #f7faf7;
+      }
+      .section-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 12px;
+      }
+      footer {
+        text-align: center;
+        color: var(--muted);
+        font-size: 0.82rem;
+        padding: 18px;
+      }
+      @media (max-width: 700px) {
+        .stats {
+          grid-template-columns: 1fr;
+        }
+        .grid {
+          grid-template-columns: 1fr;
+        }
+        header h1 {
+          font-size: 1.3rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="head">
+        <h1>Painel administrativo</h1>
+        <p>Saúde Pública em Foco · Consulta das respostas do questionário</p>
+      </div>
+    </header>
+    <main>
+      <section id="loginPanel" class="panel login">
+        <h2>Acesso restrito</h2>
+        <p class="muted">
+          Entre com o e-mail e a senha cadastrados no Supabase.
+        </p>
+        <form id="loginForm">
+          <label for="email">E-mail</label>
+          <input id="email" type="email" autocomplete="username" required />
+          <label for="password">Senha</label>
+          <input
+            id="password"
+            type="password"
+            autocomplete="current-password"
+            required
+          />
+          <div class="actions">
+            <button id="loginButton" type="submit">Entrar</button>
+          </div>
+        </form>
+        <p id="loginMessage" role="status"></p>
+      </section>
+
+      <section id="dashboard" class="hidden">
+        <div class="section-head">
+          <div>
+            <h2 style="margin-bottom: 2px">Resumo da pesquisa</h2>
+            <span id="updatedAt" class="muted"></span>
+          </div>
+          <div class="actions" style="margin: 0">
+            <button class="secondary" id="refreshButton">
+              Atualizar dados
+            </button>
+            <button class="secondary" id="csvButton">Exportar CSV</button>
+            <button id="logoutButton">Sair</button>
+          </div>
+        </div>
+
+        <div class="stats">
+          <div class="card">
+            <div class="stat-label">Total de respostas</div>
+            <div class="stat-value" id="totalCount">0</div>
+          </div>
+          <div class="card">
+            <div class="stat-label">Respostas hoje</div>
+            <div class="stat-value" id="todayCount">0</div>
+          </div>
+          <div class="card">
+            <div class="stat-label">Último envio</div>
+            <div class="stat-value" id="lastDate" style="font-size: 1.15rem">
+              —
+            </div>
+          </div>
+        </div>
+
+        <div class="grid" id="charts"></div>
+
+        <section class="panel">
+          <div class="section-head">
+            <div>
+              <h2 style="margin: 0">Respostas recebidas</h2>
+              <span class="muted"
+                >Registros individuais, do mais recente para o mais
+                antigo.</span
+              >
+            </div>
+            <span class="muted" id="tableCount"></span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Data/hora</th>
+                  <th>Conhecimento prévio</th>
+                  <th>Aprendeu?</th>
+                  <th>Quem financia?</th>
+                  <th>Regras de uso</th>
+                  <th>Importância</th>
+                </tr>
+              </thead>
+              <tbody id="responseRows">
+                <tr>
+                  <td colspan="6">Carregando...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+      <p id="globalMessage" role="status"></p>
+    </main>
+    <footer>
+      Protótipo acadêmico · Os dados são consultados diretamente no Supabase.
+    </footer>
+
+    <script>
+      // 1) Preencha com os dados do seu projeto Supabase.
+      const SUPABASE_URL = "https://ldizmdvukcwdnoxgsdvg.supabase.co";
+      const SUPABASE_ANON_KEY =
+        "sb_publishable__L4-Lt9sjKTOFZBhb3HzUw_dV-n9gtu";
+
+      const client = window.supabase.createClient(
+        SUPABASE_URL,
+        SUPABASE_ANON_KEY,
+      );
+      const loginPanel = document.getElementById("loginPanel");
+      const dashboard = document.getElementById("dashboard");
+      const loginMessage = document.getElementById("loginMessage");
+      const globalMessage = document.getElementById("globalMessage");
+      let responses = [];
+
+      const questions = [
+        { key: "previo", title: "1. Conhecimento prévio" },
+        { key: "aprendeu", title: "2. Aprendizado após a leitura" },
+        { key: "esferas", title: "3. Quem participa do financiamento do SUS?" },
+        { key: "regras", title: "4. Os recursos seguem regras legais?" },
+        { key: "importancia", title: "5. Importância do acesso à informação" },
+      ];
+
+      function showLogin(message = "") {
+        loginPanel.classList.remove("hidden");
+        dashboard.classList.add("hidden");
+        loginMessage.textContent = message;
+      }
+
+      function showDashboard() {
+        loginPanel.classList.add("hidden");
+        dashboard.classList.remove("hidden");
+      }
+
+      function formatDate(value) {
+        if (!value) return "—";
+        return new Date(value).toLocaleString("pt-BR");
+      }
+
+      function renderCharts(data) {
+        const container = document.getElementById("charts");
+        container.replaceChildren();
+
+        questions.forEach((q) => {
+          const counts = {};
+          data.forEach((row) => {
+            const answer = row[q.key] || "Sem resposta";
+            counts[answer] = (counts[answer] || 0) + 1;
+          });
+
+          const card = document.createElement("section");
+          card.className = "card";
+          const title = document.createElement("h3");
+          title.textContent = q.title;
+          title.style.cssText =
+            "font-size:1rem;color:var(--green);margin:0 0 12px";
+          card.appendChild(title);
+
+          if (!data.length) {
+            const empty = document.createElement("p");
+            empty.className = "muted";
+            empty.textContent = "Ainda não há respostas.";
+            card.appendChild(empty);
+          } else {
+            Object.entries(counts)
+              .sort((a, b) => b[1] - a[1])
+              .forEach(([answer, count]) => {
+                const row = document.createElement("div");
+                row.className = "barrow";
+                const label = document.createElement("div");
+                label.className = "barlabel";
+                const name = document.createElement("span");
+                name.textContent = answer;
+                const value = document.createElement("strong");
+                const percent = Math.round((count / data.length) * 100);
+                value.textContent = `${count} (${percent}%)`;
+                label.append(name, value);
+                const track = document.createElement("div");
+                track.className = "track";
+                const fill = document.createElement("div");
+                fill.className = "fill";
+                fill.style.width = `${percent}%`;
+                track.appendChild(fill);
+                row.append(label, track);
+                card.appendChild(row);
+              });
+          }
+          container.appendChild(card);
+        });
+      }
+
+      function renderTable(data) {
+        const body = document.getElementById("responseRows");
+        body.replaceChildren();
+        document.getElementById("tableCount").textContent =
+          `${data.length} registro(s)`;
+
+        if (!data.length) {
+          const tr = document.createElement("tr");
+          const td = document.createElement("td");
+          td.colSpan = 6;
+          td.textContent = "Nenhuma resposta recebida até o momento.";
+          tr.appendChild(td);
+          body.appendChild(tr);
+          return;
+        }
+
+        data.forEach((item) => {
+          const tr = document.createElement("tr");
+          [
+            formatDate(item.created_at),
+            item.previo,
+            item.aprendeu,
+            item.esferas,
+            item.regras,
+            item.importancia,
+          ].forEach((value) => {
+            const td = document.createElement("td");
+            td.textContent = value ?? "";
+            tr.appendChild(td);
+          });
+          body.appendChild(tr);
+        });
+      }
+
+      async function loadResponses() {
+        globalMessage.textContent = "Atualizando respostas...";
+        globalMessage.className = "muted";
+
+        const { data, error } = await client
+          .from("respostas_quiz")
+          .select(
+            "id, created_at, previo, aprendeu, esferas, regras, importancia",
+          )
+          .order("created_at", { ascending: false })
+          .limit(5000);
+
+        if (error) {
+          globalMessage.textContent =
+            "Não foi possível consultar os dados: " + error.message;
+          globalMessage.className = "error";
+          return;
+        }
+
+        responses = data || [];
+        document.getElementById("totalCount").textContent = responses.length;
+        const today = new Date().toLocaleDateString("pt-BR");
+        const todayTotal = responses.filter(
+          (r) =>
+            r.created_at &&
+            new Date(r.created_at).toLocaleDateString("pt-BR") === today,
+        ).length;
+        document.getElementById("todayCount").textContent = todayTotal;
+        document.getElementById("lastDate").textContent = responses.length
+          ? formatDate(responses[0].created_at)
+          : "—";
+        document.getElementById("updatedAt").textContent =
+          "Última atualização: " + new Date().toLocaleString("pt-BR");
+
+        renderCharts(responses);
+        renderTable(responses);
+        globalMessage.textContent = "";
+      }
+
+      document
+        .getElementById("loginForm")
+        .addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const button = document.getElementById("loginButton");
+          button.disabled = true;
+          loginMessage.textContent = "Entrando...";
+          loginMessage.className = "muted";
+
+          const { error } = await client.auth.signInWithPassword({
+            email: document.getElementById("email").value,
+            password: document.getElementById("password").value,
+          });
+
+          button.disabled = false;
+          if (error) {
+            loginMessage.textContent =
+              "Não foi possível entrar. Verifique e-mail e senha.";
+            loginMessage.className = "error";
+            return;
+          }
+          showDashboard();
+          await loadResponses();
+        });
+
+      document
+        .getElementById("refreshButton")
+        .addEventListener("click", loadResponses);
+
+      document
+        .getElementById("logoutButton")
+        .addEventListener("click", async () => {
+          await client.auth.signOut();
+          responses = [];
+          showLogin("Você saiu do painel.");
+        });
+
+      document.getElementById("csvButton").addEventListener("click", () => {
+        if (!responses.length) return;
+        const columns = [
+          "created_at",
+          "previo",
+          "aprendeu",
+          "esferas",
+          "regras",
+          "importancia",
+        ];
+        const escapeCsv = (value) =>
+          '"' + String(value ?? "").replace(/"/g, '""') + '"';
+        const csv = [
+          columns.join(";"),
+          ...responses.map((row) =>
+            columns.map((col) => escapeCsv(row[col])).join(";"),
+          ),
+        ].join("\r\n");
+        const blob = new Blob(["\ufeff" + csv], {
+          type: "text/csv;charset=utf-8;",
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "respostas_quiz_saude_publica.csv";
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+
+      async function initialize() {
+        if (
+          SUPABASE_URL.includes("COLE_AQUI") ||
+          SUPABASE_ANON_KEY.includes("COLE_AQUI")
+        ) {
+          showLogin(
+            "Antes de usar, preencha SUPABASE_URL e SUPABASE_ANON_KEY no código.",
+          );
+          return;
+        }
+        const {
+          data: { session },
+        } = await client.auth.getSession();
+        if (session) {
+          showDashboard();
+          await loadResponses();
+        } else {
+          showLogin();
+        }
+      }
+
+      initialize();
+    </script>
+  </body>
+</html>
